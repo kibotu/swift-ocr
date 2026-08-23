@@ -69,7 +69,7 @@ jobs:
             ```
 
             ### Changes
-            See commit history for details.
+            See [CHANGELOG.md](https://github.com/kibotu/swift-ocr/blob/main/CHANGELOG.md).
           files: |
             .build/release/swift-ocr
           draft: false

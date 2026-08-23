@@ -31,7 +31,7 @@ enum PdfToPng {
             : URL(fileURLWithPath: pdf.deletingPathExtension().path + "_p\(page).png")
     }
 
-    private static func bitmap(for page: CGPDFPage, scale: Double) -> CGImage? {
+    static func bitmap(for page: CGPDFPage, scale: Double) -> CGImage? {
         let box = page.getBoxRect(.mediaBox)
         let width = max(Int((box.width * scale).rounded()), 1)
         let height = max(Int((box.height * scale).rounded()), 1)

@@ -25,7 +25,7 @@ swift build -c release
 
 ## Requirements
 
-- **macOS 13+** — Vision text recognition and Swift Concurrency
+- **macOS 13+** — Vision text recognition and Swift Concurrency (`--documents` needs macOS 26+)
 - **Xcode 15+** or matching command line tools — `xcode-select --install`
 
 One dependency besides the system frameworks: [swift-argument-parser](https://github.com/apple/swift-argument-parser).
@@ -38,6 +38,7 @@ USAGE: swift-ocr <subcommand>
 SUBCOMMANDS:
   pdf2png   Render every page of each PDF in a folder to a PNG
   ocr       Recognize text in each image of a folder, writing <name>.md
+  pdf2pdf   Add an invisible OCR text layer to each PDF, making it searchable
   combine   Merge OCR'd Markdown files into one combined.md
 ```
 
@@ -55,8 +56,12 @@ swift-ocr combine ~/Documents/scans   # optional, see below
 Options:
 
 ```bash
-swift-ocr pdf2png --scale 3 ~/Documents/scans   # higher resolution for small print
-swift-ocr --help                                # all options
+swift-ocr pdf2png --scale 3 ~/Documents/scans          # higher resolution for small print
+swift-ocr ocr --lang de --lang fr ~/Documents/scans    # explicit recognition languages
+swift-ocr ocr --meta --enhance ~/Documents/scans       # YAML front-matter, faint-scan boost
+swift-ocr ocr --documents ~/Documents/scans            # native headings/lists/tables (macOS 26+)
+swift-ocr pdf2pdf ~/Documents/scans                    # searchable PDFs: letter.pdf → letter_ocr.pdf
+swift-ocr --help                                       # all options
 ```
 
 Output files appear next to their inputs. A single-page PDF keeps its base name
@@ -94,7 +99,12 @@ scanned documents, this is rarely a problem.
   objects, no TIFF conversion, no deprecated APIs. Each page gets an opaque white
   background, because OCR needs dark text on a light surface.
 - Images load through ImageIO (`CGImageSource`), not `NSImage`.
+- `pdf2pdf` draws recognized lines with invisible text over the page image — the
+  visible surface stays the scan, while Preview, Spotlight and Acrobat can search it.
+- `ocr` reconstructs paragraphs and headings from line bounding boxes; on macOS 26+
+  `--documents` hands the job to Apple's document recognizer instead.
 - `combine` produces byte-identical output to the Python script it replaced.
+- Notable changes are tracked in [CHANGELOG.md](CHANGELOG.md) (Keep a Changelog).
 
 ## Development
 
@@ -114,7 +124,7 @@ processing local.
 
 ## Support
 
-Did swift-ocr save you hours of setup work? Did your scanned documents stay on your
+Did swift-ocr save some time? Did your scanned documents stay on your
 machine? Then please consider [buying me a coffee](https://buymeacoffee.com/kibotu).
 
 ## License

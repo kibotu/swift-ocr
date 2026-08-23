@@ -4,6 +4,7 @@ enum PipelineError: LocalizedError {
     case cannotReadFolder(URL)
     case unreadablePDF(URL)
     case cannotEncodePNG(URL)
+    case cannotEncodePDF(URL)
     case unreadableImage(URL)
 
     var errorDescription: String? {
@@ -11,6 +12,7 @@ enum PipelineError: LocalizedError {
         case .cannotReadFolder(let url): "Cannot read folder: \(url.path)"
         case .unreadablePDF(let url): "Cannot read PDF: \(url.path)"
         case .cannotEncodePNG(let url): "Cannot encode PNG: \(url.path)"
+        case .cannotEncodePDF(let url): "Cannot encode PDF: \(url.path)"
         case .unreadableImage(let url): "Cannot read image: \(url.path)"
         }
     }
