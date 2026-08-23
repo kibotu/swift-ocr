@@ -38,7 +38,9 @@ enum DocumentsRecognizer {
         }
 
         func wait() throws -> T {
-            guard semaphore.wait(timeout: .now() + .seconds(120)) == .success else {
+            // 30s: local baseline is ~0.4s per page, so even a 70x-slower runner fits;
+            // a higher cap lets stacked wedges eat the whole CI job budget.
+            guard semaphore.wait(timeout: .now() + .seconds(30)) == .success else {
                 throw PipelineError.recognitionTimedOut
             }
             return try storage!.get()

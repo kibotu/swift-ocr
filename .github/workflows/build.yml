@@ -22,6 +22,10 @@ jobs:
         run: swift test --skip 'OcrOptionTests|RecognizerForwardingTests|ConvertTests|DocumentsRecognizerTests|PdfToPdfTests'
 
       - name: Test (Vision)
+        timeout-minutes: 8
+        env:
+          # Unbuffered stdout — otherwise a killed run takes its log with it.
+          NSUnbufferedIO: YES
         run: swift test --filter 'OcrOptionTests|RecognizerForwardingTests|ConvertTests|DocumentsRecognizerTests|PdfToPdfTests'
 
       - name: Release build
