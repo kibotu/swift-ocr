@@ -1,0 +1,20 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Swift sources
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build pdf2png
+        run: swiftc -O -o pdf2png pdf2png.swift
+
+      - name: Build ocr
+        run: swiftc -O -o ocr ocr.swift
