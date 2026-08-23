@@ -35,6 +35,10 @@ jobs:
           ls -la .build/release/
           .build/release/swift-ocr --version
 
+      # The binary's version constant is the single source of truth; a mismatch fails the release.
+      - name: Verify version matches tag
+        run: test "$(.build/release/swift-ocr --version)" = "${GITHUB_REF#refs/tags/}"
+
       - name: Extract version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT

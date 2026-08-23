@@ -6,7 +6,7 @@ import Foundation
 /// surface stays the rendered scan.
 enum PdfToPdf {
     /// Renders each page, recognizes its text and draws it invisibly over the page image.
-    static func render(pdfAt url: URL, scale: Double, languages: [String]? = nil) throws -> URL {
+    static func render(pdfAt url: URL, scale: Double, languages: [String] = []) throws -> URL {
         guard let document = CGPDFDocument(url as CFURL) else {
             throw PipelineError.unreadablePDF(url)
         }
@@ -37,16 +37,19 @@ enum PdfToPdf {
         return output
     }
 
-    /// Normalized Vision coordinates map straight onto the page rectangle.
-    /// ponytail: one text run per line — selection highlights whole lines; carry VNRecognizedText
-    /// and use its bounds(for:) per word if per-word highlighting matters someday.
-    private static func draw(_ line: RecognizedLine, onPage box: CGRect, on context: CGContext) {
-        let rect = CGRect(
-            x: box.minX + line.box.minX * box.width,
-            y: box.minY + line.box.minY * box.height,
-            width: line.box.width * box.width,
-            height: line.box.height * box.height
+    /// The one conversion between page conventions (top-left origin, normalized)
+    /// and CoreGraphics PDF space (bottom-left origin, points).
+    private static func frame(_ region: PageRect, in page: CGRect) -> CGRect {
+        CGRect(
+            x: page.minX + region.minX * page.width,
+            y: page.minY + (1 - region.maxY) * page.height,
+            width: region.width * page.width,
+            height: region.height * page.height
         )
+    }
+
+    private static func draw(_ line: RecognizedLine, onPage page: CGRect, on context: CGContext) {
+        let rect = frame(line.region, in: page)
         guard rect.width > 0, rect.height > 0 else { return }
         let font = CTFontCreateWithName("Helvetica" as CFString, rect.height * 0.85, nil)
         guard let attributed = CFAttributedStringCreate(nil, line.text as CFString, [kCTFontAttributeName: font] as CFDictionary) else { return }

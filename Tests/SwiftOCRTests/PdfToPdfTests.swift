@@ -11,10 +11,12 @@ import UniformTypeIdentifiers
 struct DocumentsRecognizerTests {
     @Test
     func recognizesDocumentStructure() throws {
-        guard #available(macOS 26.0, *) else { return } // older runners fall back to Layout
+        guard #available(macOS 26.0, *) else { return } // older runners exercise only the fallback path
         let image = try TestImages.rasterizedText(text: "Quarterly Report\nTotal due is 42 EUR")
-        let markdown = try #require(try DocumentsRecognizer.markdown(in: image))
-        #expect(markdown.contains("42 EUR"))
+        let result = try Recognizer.read(image, structured: true)
+
+        #expect(!result.fellBack)
+        #expect(DocumentRenderer.markdown(from: result.blocks).contains("42 EUR"))
     }
 }
 

@@ -3,10 +3,10 @@ import NaturalLanguage
 
 /// Detects entities with NSDataDetector and renders them as YAML front-matter.
 enum FrontMatter {
-    /// Returns a `---\n…\n---\n` block for the given text, or nil when no entity was found.
-    static func markdown(for text: String) -> String? {
+    /// Returns a `---\n…\n---\n` block for the given text — empty when nothing was found.
+    static func markdown(for text: String) -> String {
         let types: NSTextCheckingResult.CheckingType = [.date, .address, .phoneNumber, .link]
-        guard let detector = try? NSDataDetector(types: types.rawValue) else { return nil }
+        guard let detector = try? NSDataDetector(types: types.rawValue) else { return "" }
 
         let matches = detector.matches(in: text, range: NSRange(text.startIndex..<text.endIndex, in: text))
         let iso8601 = ISO8601DateFormatter()
@@ -20,7 +20,7 @@ enum FrontMatter {
                 .joined(separator: ", ")
         }.filter { !$0.isEmpty })
 
-        guard !dates.isEmpty || !phones.isEmpty || !links.isEmpty || !addresses.isEmpty else { return nil }
+        guard !dates.isEmpty || !phones.isEmpty || !links.isEmpty || !addresses.isEmpty else { return "" }
 
         var lines: [String] = []
         if let language = NLLanguageRecognizer.dominantLanguage(for: text)?.rawValue {

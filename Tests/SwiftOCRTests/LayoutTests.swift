@@ -6,54 +6,90 @@ import Testing
 
 @Suite
 struct LayoutTests {
+    /// `y` is the top edge, in page conventions.
     private func line(_ text: String, x: CGFloat, y: CGFloat, width: CGFloat = 0.5, height: CGFloat = 0.04) -> RecognizedLine {
-        RecognizedLine(text: text, box: CGRect(x: x, y: y, width: width, height: height))
+        RecognizedLine(text: text, region: PageRect(minX: x, minY: y, maxX: x + width, maxY: y + height))
+    }
+
+    private func markdown(_ lines: [RecognizedLine]) -> String {
+        DocumentRenderer.markdown(from: Layout.blocks(from: lines))
     }
 
     @Test
     func closeLinesFormOneParagraph() {
-        let markdown = Layout.markdown(from: [
-            line("Second half of the", x: 0.1, y: 0.90),
-            line("sentence wraps here.", x: 0.1, y: 0.86),
-        ])
-        #expect(markdown == "Second half of the sentence wraps here.\n")
+        #expect(markdown([
+            line("Second half of the", x: 0.1, y: 0.86),
+            line("sentence wraps here.", x: 0.1, y: 0.90),
+        ]) == "Second half of the sentence wraps here.\n")
     }
 
     @Test
     func largeGapStartsNewParagraph() {
-        let markdown = Layout.markdown(from: [
-            line("First paragraph.", x: 0.1, y: 0.90),
+        #expect(markdown([
+            line("First paragraph.", x: 0.1, y: 0.10),
             line("Second paragraph.", x: 0.1, y: 0.70),
-        ])
-        #expect(markdown == "First paragraph.\n\nSecond paragraph.\n")
+        ]) == "First paragraph.\n\nSecond paragraph.\n")
     }
 
     @Test
     func tallLineBecomesHeading() {
-        let markdown = Layout.markdown(from: [
-            line("Invoice", x: 0.1, y: 0.95, width: 0.2, height: 0.08),
+        #expect(markdown([
+            line("Invoice", x: 0.1, y: 0.05, width: 0.2, height: 0.08),
             line("Amount due 42 EUR", x: 0.1, y: 0.80),
-        ])
-        #expect(markdown == "## Invoice\n\nAmount due 42 EUR\n")
+        ]) == "# Invoice\n\nAmount due 42 EUR\n")
     }
 
     @Test
-    func normalizesBulletCharacters() {
-        let markdown = Layout.markdown(from: [line("• first item", x: 0.1, y: 0.5)])
-        #expect(markdown == "- first item\n")
+    func consecutiveBulletsGroupIntoOneList() {
+        #expect(markdown([
+            line("• first item", x: 0.1, y: 0.50),
+            line("• second item", x: 0.1, y: 0.54),
+        ]) == "- first item\n- second item\n")
+    }
+
+    @Test
+    func inlineMarkersSplitIntoItems() {
+        #expect(markdown([line("• alpha • beta", x: 0.1, y: 0.5)]) == "- alpha\n- beta\n")
+    }
+
+    @Test
+    func listsAndParagraphsInterleaveInReadingOrder() {
+        #expect(markdown([
+            line("• only item", x: 0.1, y: 0.20),
+            line("plain paragraph", x: 0.1, y: 0.50),
+            line("▪ trailing item", x: 0.1, y: 0.80),
+        ]) == "- only item\n\nplain paragraph\n\n- trailing item\n")
     }
 
     @Test
     func sortsTopDownRegardlessOfInputOrder() {
-        let markdown = Layout.markdown(from: [
-            line("bottom line", x: 0.1, y: 0.2),
-            line("top line", x: 0.1, y: 0.8),
-        ])
-        #expect(markdown == "top line\n\nbottom line\n")
+        #expect(markdown([
+            line("bottom line", x: 0.1, y: 0.80),
+            line("top line", x: 0.1, y: 0.20),
+        ]) == "top line\n\nbottom line\n")
     }
 
     @Test
     func emptyInputYieldsEmptyOutput() {
-        #expect(Layout.markdown(from: []) == "")
+        #expect(DocumentRenderer.markdown(from: []) == "")
+    }
+}
+
+@Suite
+struct PageRectTests {
+    /// Floating-point origin flips need a tolerance, not exact equality.
+    private func expectClose(_ a: CGFloat, _ b: CGFloat) -> Bool {
+        abs(a - b) < 0.0001
+    }
+
+    @Test
+    func flipsVisionOriginToPageTopLeft() {
+        // Vision box occupying the top tenth of the page (bottom-left origin).
+        let page = PageRect(visionBox: CGRect(x: 0.1, y: 0.90, width: 0.5, height: 0.08))
+        #expect(expectClose(page.minY, 0.02))
+        #expect(expectClose(page.maxY, 0.10))
+        #expect(page.minX == 0.1)
+        #expect(expectClose(page.width, 0.5))
+        #expect(expectClose(page.height, 0.08))
     }
 }

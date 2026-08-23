@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-23
+
+### Fixed
+
+- `ocr --documents` now forwards `--lang` hints to the document recognizer
+  instead of silently dropping them.
+
+### Changed
+
+- The document recognizer no longer prints a page's top line twice (it is
+  reported as both title and paragraph; only the heading survives).
+- Bullet-led lines become Markdown list items, and consecutive items group
+  into one list.
+- Headings render as `#`.
+
 ## [1.1.0] - 2026-08-23
 
 ### Added
@@ -38,5 +53,6 @@ Initial release.
 - `combine` — merge OCR'd Markdown questionnaire files into one sorted `combined.md`.
 - Fully on-device processing; nothing leaves the machine.
 
+[1.2.0]: https://github.com/kibotu/swift-ocr/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/kibotu/swift-ocr/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/kibotu/swift-ocr/releases/tag/1.0.0

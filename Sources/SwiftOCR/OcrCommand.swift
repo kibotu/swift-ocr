@@ -28,7 +28,8 @@ struct OcrCommand: ParsableCommand {
         let images = try folderURL.contents(matching: ["png", "jpg", "jpeg", "tiff"])
         guard !images.isEmpty else { print("No images found in \(folderURL.path)"); return }
 
-        let languages = lang.isEmpty ? nil : TextRecognizer.resolveLanguages(lang)
+        let hint = TextRecognizer.resolveLanguages(lang)
+        for code in hint.rejected { note("WARN (unsupported language): \(code) — ignoring") }
         let ciContext = enhance ? CIContext() : nil
         var osWarned = false
 
@@ -36,20 +37,23 @@ struct OcrCommand: ParsableCommand {
         for image in images {
             do {
                 var cgImage = try TextRecognizer.loadCGImage(at: image)
-                if let ciContext { cgImage = TextRecognizer.enhanced(cgImage, using: ciContext) }
-
-                let body: String
-                if documents, #available(macOS 26.0, *) {
-                    body = try DocumentsRecognizer.markdown(in: cgImage) ?? ""
-                } else {
-                    if documents && !osWarned {
-                        note("WARN (--documents): needs macOS 26 — falling back to standard recognition")
-                        osWarned = true
+                if let ciContext {
+                    if let processed = TextRecognizer.enhanced(cgImage, using: ciContext) {
+                        cgImage = processed
+                    } else {
+                        note("WARN (enhance failed): \(image.lastPathComponent) — continuing unprocessed")
                     }
-                    body = Layout.markdown(from: try TextRecognizer.recognizeLines(in: cgImage, languages: languages))
                 }
+
+                let result = try Recognizer.read(cgImage, languages: hint.resolved, structured: documents)
+                if result.fellBack && !osWarned {
+                    note("WARN (--documents): needs macOS 26 — falling back to geometric layout")
+                    osWarned = true
+                }
+
+                let body = DocumentRenderer.markdown(from: result.blocks)
                 let output = image.deletingPathExtension().appendingPathExtension("md")
-                let content = meta ? (FrontMatter.markdown(for: body) ?? "") + body : body
+                let content = meta ? FrontMatter.markdown(for: body) + body : body
                 try content.write(to: output, atomically: true, encoding: .utf8)
                 print("\(image.lastPathComponent) -> \(output.lastPathComponent) (\(body.count) chars)")
                 recognized += 1

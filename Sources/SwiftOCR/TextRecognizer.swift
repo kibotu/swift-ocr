@@ -3,10 +3,9 @@ import CoreImage
 import CoreImage.CIFilterBuiltins
 import Foundation
 import ImageIO
-import NaturalLanguage
 import Vision
 
-/// Apple Vision text recognition, entirely on-device.
+/// Apple Vision text recognition, entirely on-device. Pure computation — callers own all output.
 enum TextRecognizer {
     /// Loads an image through ImageIO — no NSImage detour.
     static func loadCGImage(at url: URL) throws -> CGImage {
@@ -17,43 +16,46 @@ enum TextRecognizer {
         return image
     }
 
-    /// Maps user-supplied codes (`de`, `en-US`) onto Vision's supported languages.
-    /// Returns nil (Vision's own auto-detection) when nothing valid remains.
-    static func resolveLanguages(_ requested: [String]) -> [String]? {
+    /// Maps user-supplied codes (`de`, `en-US`) onto Vision's supported languages,
+    /// reporting what could not be matched so the caller decides what to say about it.
+    static func resolveLanguages(_ codes: [String]) -> (resolved: [String], rejected: [String]) {
         let supported = (try? VNRecognizeTextRequest().supportedRecognitionLanguages()) ?? []
-        let resolved = requested.compactMap { code in
-            supported.first { $0.lowercased() == code.lowercased() }
-                ?? supported.first { $0.lowercased().hasPrefix("\(code.lowercased())-") }
+        var resolved: [String] = []
+        var rejected: [String] = []
+        for code in codes {
+            let lowered = code.lowercased()
+            if let match = supported.first(where: { $0.lowercased() == lowered })
+                ?? supported.first(where: { $0.lowercased().hasPrefix("\(lowered)-") }) {
+                resolved.append(match)
+            } else {
+                rejected.append(code)
+            }
         }
-        for dropped in requested where !resolved.contains(where: { $0.lowercased().hasPrefix(dropped.lowercased()) }) {
-            note("WARN (unsupported language): \(dropped) — ignoring")
-        }
-        return resolved.isEmpty ? nil : resolved
+        return (resolved, rejected)
     }
 
-    /// Grayscale plus a contrast lift, for faint scans. Falls back to the input unchanged.
-    static func enhanced(_ image: CGImage, using context: CoreImage.CIContext) -> CGImage {
+    /// Grayscale plus a contrast lift, for faint scans; nil when processing failed.
+    static func enhanced(_ image: CGImage, using context: CIContext) -> CGImage? {
         let filter = CIFilter.colorControls()
         filter.inputImage = CIImage(cgImage: image)
         filter.saturation = 0
         filter.contrast = 1.2
-        guard let output = filter.outputImage,
-              let result = context.createCGImage(output, from: output.extent) else {
-            note("WARN (enhance failed): continuing unprocessed")
-            return image
-        }
-        return result
+        guard let output = filter.outputImage else { return nil }
+        return context.createCGImage(output, from: output.extent)
     }
 
-    /// Returns recognized lines with their page positions, top-down reading order applied by `Layout`.
-    static func recognizeLines(in image: CGImage, languages: [String]? = nil) throws -> [RecognizedLine] {
+    /// Returns recognized lines with their page positions in document conventions.
+    /// An empty `languages` array lets Vision auto-detect across everything it supports.
+    static func recognizeLines(in image: CGImage, languages: [String] = []) throws -> [RecognizedLine] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
-        request.recognitionLanguages = languages ?? ((try? request.supportedRecognitionLanguages()) ?? [])
+        request.recognitionLanguages = languages.isEmpty ? ((try? request.supportedRecognitionLanguages()) ?? []) : languages
         try VNImageRequestHandler(cgImage: image).perform([request])
         return (request.results ?? []).compactMap { observation in
-            observation.topCandidates(1).first.map { RecognizedLine(text: $0.string, box: observation.boundingBox) }
+            observation.topCandidates(1).first.map { candidate in
+                RecognizedLine(text: candidate.string, region: PageRect(visionBox: observation.boundingBox))
+            }
         }
     }
 }

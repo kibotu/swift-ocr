@@ -21,11 +21,13 @@ struct PdfToPdfCommand: ParsableCommand {
         let pdfs = try folderURL.contents(matching: ["pdf"])
         guard !pdfs.isEmpty else { print("No PDFs found in \(folderURL.path)"); return }
 
-        let languages = lang.isEmpty ? nil : TextRecognizer.resolveLanguages(lang)
+        let hint = TextRecognizer.resolveLanguages(lang)
+        for code in hint.rejected { note("WARN (unsupported language): \(code) — ignoring") }
+
         var converted = 0
         for pdf in pdfs {
             do {
-                let output = try PdfToPdf.render(pdfAt: pdf, scale: scale, languages: languages)
+                let output = try PdfToPdf.render(pdfAt: pdf, scale: scale, languages: hint.resolved)
                 print("\(pdf.lastPathComponent) -> \(output.lastPathComponent)")
                 converted += 1
             } catch {
