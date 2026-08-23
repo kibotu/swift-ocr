@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-08-23
+
+### Fixed
+
+- CI no longer hangs forever: the structured-recognition bridge times out
+  after 120 s and reports `recognitionTimedOut` instead of blocking on a
+  wedged Vision backend, and both workflows cap jobs at 20 minutes.
+- Test step split into Vision-free and Vision suites so a hang names the
+  culprit group in the log.
+
 ## [1.5.0] - 2026-08-23
 
 ### Added

@@ -26,7 +26,8 @@ enum DocumentsRecognizer {
     }
 
     /// Bridges one async call into synchronous code. Fulfill-before-signal ordering
-    /// guarantees the storage invariant inside `wait()`.
+    /// guarantees the storage invariant inside `wait()`. The timeout keeps a wedged
+    /// Vision backend from hanging the process forever (seen on headless CI runners).
     private final class BlockingCall<T: Sendable>: @unchecked Sendable {
         private let semaphore = DispatchSemaphore(value: 0)
         private var storage: Result<T, any Error>?
@@ -37,7 +38,9 @@ enum DocumentsRecognizer {
         }
 
         func wait() throws -> T {
-            semaphore.wait()
+            guard semaphore.wait(timeout: .now() + .seconds(120)) == .success else {
+                throw PipelineError.recognitionTimedOut
+            }
             return try storage!.get()
         }
     }

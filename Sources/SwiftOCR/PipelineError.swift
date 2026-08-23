@@ -7,6 +7,7 @@ enum PipelineError: LocalizedError {
     case cannotEncodePNG(URL)
     case cannotEncodePDF(URL)
     case unreadableImage(URL)
+    case recognitionTimedOut
 
     var errorDescription: String? {
         switch self {
@@ -16,6 +17,7 @@ enum PipelineError: LocalizedError {
         case .cannotEncodePNG(let url): "Cannot encode PNG: \(url.path)"
         case .cannotEncodePDF(let url): "Cannot encode PDF: \(url.path)"
         case .unreadableImage(let url): "Cannot read image: \(url.path)"
+        case .recognitionTimedOut: "Text recognition did not complete in time"
         }
     }
 }
