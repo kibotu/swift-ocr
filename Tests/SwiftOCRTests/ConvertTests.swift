@@ -74,8 +74,13 @@ final class ConvertTests {
         _ = try TestImages.rasterizedTextPDF(text: "End to end pipeline99", in: directory)
         try convert()
 
-        let markdown = try String(contentsOf: directory.appending(path: "sample.md"), encoding: .utf8)
-        #expect(markdown.contains("pipeline99"))
+        // Per-input layout: sample.pdf -> sample/{png,md}/ plus merged sample/sample.md.
+        let home = directory.appending(path: "sample")
+        #expect(FileManager.default.fileExists(atPath: home.appending(path: "png/sample.png").path))
+        let page = try String(contentsOf: home.appending(path: "md/sample.md"), encoding: .utf8)
+        #expect(page.contains("pipeline99"))
+        let combined = try String(contentsOf: home.appending(path: "sample.md"), encoding: .utf8)
+        #expect(combined.contains("pipeline99"))
     }
 
     @Test
@@ -83,7 +88,8 @@ final class ConvertTests {
         let pdf = try TestImages.rasterizedTextPDF(text: "Single file needle42", in: directory)
         try convert(input: pdf.path)
 
-        #expect(FileManager.default.fileExists(atPath: pdf.deletingPathExtension().appendingPathExtension("md").path))
+        let combined = try String(contentsOf: directory.appending(path: "sample/sample.md"), encoding: .utf8)
+        #expect(combined.contains("needle42"))
     }
 
     private func convert(input: String? = nil) throws {

@@ -4,14 +4,16 @@ import CoreImage
 
 /// One image in, `<stem>.md` beside it — the recognition step every OCR-ing command shares.
 enum ImageOcr {
-    /// Loads, optionally enhances, recognizes and writes the Markdown next to the image.
+    /// Loads, optionally enhances, recognizes and writes the Markdown for one image —
+    /// into `directory` (default: beside the image).
     static func writeMarkdown(
         for image: URL,
         languages: [String],
         enhance: Bool = false,
         using ciContext: CIContext? = nil,
         structured: Bool = false,
-        frontMatter: Bool = false
+        frontMatter: Bool = false,
+        writingInto directory: URL? = nil
     ) throws -> (output: URL, characters: Int, fellBack: Bool) {
         var cgImage = try TextRecognizer.loadCGImage(at: image)
         if enhance, let ciContext {
@@ -24,7 +26,9 @@ enum ImageOcr {
 
         let result = try Recognizer.read(cgImage, languages: languages, structured: structured)
         let body = DocumentRenderer.markdown(from: result.blocks)
-        let output = image.deletingPathExtension().appendingPathExtension("md")
+        let directory = directory ?? image.deletingLastPathComponent()
+        let output = directory.appending(path: image.lastPathComponent)
+            .deletingPathExtension().appendingPathExtension("md")
         let content = frontMatter ? FrontMatter.markdown(for: body) + body : body
         try content.write(to: output, atomically: true, encoding: .utf8)
         return (output, body.count, result.fellBack)
@@ -37,7 +41,8 @@ enum ImageOcr {
         languages: [String],
         enhance: Bool,
         structured: Bool,
-        frontMatter: Bool
+        frontMatter: Bool,
+        writingInto directory: URL? = nil
     ) -> Int {
         let ciContext = enhance ? CIContext() : nil
         var osWarned = false
@@ -50,7 +55,8 @@ enum ImageOcr {
                     enhance: enhance,
                     using: ciContext,
                     structured: structured,
-                    frontMatter: frontMatter
+                    frontMatter: frontMatter,
+                    writingInto: directory
                 )
                 if result.fellBack && !osWarned {
                     note("WARN (--documents): needs macOS 26 — falling back to geometric layout")

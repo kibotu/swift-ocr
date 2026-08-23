@@ -5,8 +5,10 @@ import UniformTypeIdentifiers
 
 /// Renders PDF pages to PNG bitmaps with CoreGraphics only — no AppKit, no deprecated lockFocus.
 enum PdfToPng {
-    /// Renders every page of the PDF and writes PNGs next to it. Returns the written URLs.
-    static func render(pdfAt url: URL, scale: Double) throws -> [URL] {
+    /// Renders every page of the PDF and writes PNGs into `directory` (default: beside
+    /// the PDF). Returns the written URLs.
+    static func render(pdfAt url: URL, scale: Double, into directory: URL? = nil) throws -> [URL] {
+        let destination = directory ?? url.deletingLastPathComponent()
         guard let document = CGPDFDocument(url as CFURL) else {
             throw PipelineError.unreadablePDF(url)
         }
@@ -17,7 +19,7 @@ enum PdfToPng {
         for pageNumber in 1...pageCount {
             guard let page = document.page(at: pageNumber),
                   let image = bitmap(for: page, scale: scale) else { continue }
-            let output = outputURL(for: url, page: pageNumber, pageCount: pageCount)
+            let output = outputURL(for: url, page: pageNumber, pageCount: pageCount, in: destination)
             try encodePNG(image, to: output)
             outputs.append(output)
         }
@@ -25,10 +27,11 @@ enum PdfToPng {
     }
 
     /// Single-page PDFs keep their base name; multi-page ones get a `_p<N>` suffix.
-    static func outputURL(for pdf: URL, page: Int, pageCount: Int) -> URL {
-        pageCount == 1
-            ? pdf.deletingPathExtension().appendingPathExtension("png")
-            : URL(fileURLWithPath: pdf.deletingPathExtension().path + "_p\(page).png")
+    static func outputURL(for pdf: URL, page: Int, pageCount: Int, in directory: URL) -> URL {
+        let stem = pdf.deletingPathExtension().lastPathComponent
+        return pageCount == 1
+            ? directory.appending(path: stem).appendingPathExtension("png")
+            : directory.appending(path: stem + "_p\(page).png")
     }
 
     static func bitmap(for page: CGPDFPage, scale: Double) -> CGImage? {

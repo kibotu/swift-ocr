@@ -1,12 +1,13 @@
 import ArgumentParser
 import Foundation
 
-/// The do-it-all default: PDFs become PNGs, every image becomes Markdown.
+/// The do-it-all default: PDFs become PNGs, every image becomes Markdown,
+/// all Markdown merges into one combined.md.
 /// Point it at a folder or a single file and it runs the whole pipeline.
 struct ConvertCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "convert",
-        abstract: "Render PDFs to PNGs and recognize text into Markdown — the whole pipeline in one pass."
+        abstract: "Render PDFs to PNGs, recognize text into Markdown and merge it into one combined.md."
     )
 
     @Argument(help: "Folder, PDF or image. Defaults to the current directory.", completion: .file())
@@ -29,26 +30,60 @@ struct ConvertCommand: ParsableCommand {
 
     mutating func run() throws {
         let inputURL = URL(fileURLWithPath: input)
-        let files = try inputURL.inputs(matching: ["pdf", "png", "jpg", "jpeg", "tiff"])
-        let pdfs = files.filter { $0.pathExtension.lowercased() == "pdf" && !$0.isOcrOutput }
-
-        // Rendered pages join any loose images in the recognition queue.
-        var queue = files.filter { $0.pathExtension.lowercased() != "pdf" }
-        guard !queue.isEmpty || !pdfs.isEmpty else {
+        let inputs = try inputURL.inputs(matching: ["pdf", "png", "jpg", "jpeg", "tiff"])
+            .filter { !$0.isOcrOutput }
+        guard !inputs.isEmpty else {
             print("No PDFs or images found at \(inputURL.path)")
             return
         }
-        for pdf in pdfs {
-            do { queue += try PdfToPng.render(pdfAt: pdf, scale: scale) }
-            catch { note("SKIP (render failed): \(pdf.lastPathComponent) — \(error.localizedDescription)") }
-        }
 
-        queue.sort { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
         let hint = TextRecognizer.resolveLanguages(lang)
         for code in hint.rejected { note("WARN (unsupported language): \(code) — ignoring") }
 
-        let recognized = ImageOcr.recognize(queue, languages: hint.resolved, enhance: enhance, structured: documents, frontMatter: meta)
-        print("\(recognized)/\(queue.count) file(s) converted")
-        if recognized == 0 { throw ExitCode.failure }
+        var converted = 0
+        for file in inputs {
+            do {
+                // Each processed file gets its own directory: pages' PNGs in png/,
+                // pages' Markdown in md/, all pages merged into <stem>.md.
+                let stem = file.deletingPathExtension().lastPathComponent
+                let outputDirectory = file.deletingLastPathComponent().appending(path: stem)
+                let pngDirectory = outputDirectory.appending(path: "png")
+                let mdDirectory = outputDirectory.appending(path: "md")
+
+                var pages: [URL] = []
+                if file.pathExtension.lowercased() == "pdf" {
+                    try FileManager.default.createDirectory(at: pngDirectory, withIntermediateDirectories: true)
+                    pages = try PdfToPng.render(pdfAt: file, scale: scale, into: pngDirectory)
+                } else {
+                    pages = [file]
+                }
+                try FileManager.default.createDirectory(at: mdDirectory, withIntermediateDirectories: true)
+
+                let recognized = ImageOcr.recognize(
+                    pages,
+                    languages: hint.resolved,
+                    enhance: enhance,
+                    structured: documents,
+                    frontMatter: meta,
+                    writingInto: mdDirectory
+                )
+                guard recognized > 0 else {
+                    note("SKIP (nothing recognized): \(file.lastPathComponent)")
+                    continue
+                }
+
+                let pageMarkdowns = try mdDirectory.inputs(matching: ["md"])
+                let combined = try CombineCommand.concatenate(
+                    pageMarkdowns,
+                    into: outputDirectory.appending(path: "\(stem).md")
+                )
+                print("\(file.lastPathComponent) -> \(stem)/\(stem).md (\(combined) page(s))")
+                converted += 1
+            } catch {
+                note("SKIP (failed): \(file.lastPathComponent) — \(error.localizedDescription)")
+            }
+        }
+        print("\(converted)/\(inputs.count) file(s) converted")
+        if converted == 0 { throw ExitCode.failure }
     }
 }

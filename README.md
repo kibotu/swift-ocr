@@ -36,7 +36,7 @@ One dependency besides the system frameworks: [swift-argument-parser](https://gi
 USAGE: swift-ocr <subcommand>
 
 SUBCOMMANDS:
-  convert   Render PDFs to PNGs and recognize text into Markdown (default)
+  convert   Render PDFs to PNGs, recognize text into Markdown and merge it into one combined.md (default)
   pdf2png   Render a PDF, or every PDF in a folder, to one PNG per page
   ocr       Recognize text in an image or each image of a folder, writing <name>.md
   pdf2pdf   Add an invisible OCR text layer to each PDF, making it searchable
@@ -44,8 +44,18 @@ SUBCOMMANDS:
 ```
 
 Each subcommand accepts a folder or a single file. If you omit it, the tool
-uses the current directory. The default `convert` runs everything: PDFs are
-rendered to PNGs, then every image is recognized into `<name>.md`.
+uses the current directory. The default `convert` runs everything, and every
+processed input gets its own directory named after it:
+
+```text
+letter.pdf  ->  letter/
+                  png/letter_p1.png   rendered pages
+                  md/letter_p1.md     recognized pages
+                  letter.md           all pages merged
+```
+
+Plain images skip the `png` step — their Markdown lands in `<name>/md/`, merged
+into `<name>/<name>.md`.
 
 Convert all scans in a folder — one command:
 
@@ -72,10 +82,11 @@ swift-ocr pdf2pdf ~/Documents/scans                    # searchable PDFs: letter
 swift-ocr --help                                       # all options
 ```
 
-Output files appear next to their inputs. A single-page PDF keeps its base name
-(`letter.pdf` → `letter.png`); a multi-page PDF gets a suffix per page (`handout.pdf` →
-`handout_p1.png`, `handout_p1.md`, …). Warnings go to stderr; stdout carries results
-only, so scripts can parse it.
+The standalone steps (`pdf2png`, `ocr`, `pdf2pdf`) write flat, next to their
+inputs: a single-page PDF keeps its base name (`letter.pdf` → `letter.png`); a
+multi-page PDF gets a suffix per page (`handout.pdf` → `handout_p1.png`,
+`handout_p1.md`, …). Warnings go to stderr; stdout carries results only, so
+scripts can parse it.
 
 `combine` concatenates every `<name>.md` in a folder into one `combined.md`,
 sorted by name — so `handout_p1.md`, `handout_p2.md`, … become a single

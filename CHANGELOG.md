@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-08-23
+
+### Added
+
+- `convert` organizes output per input file: `letter.pdf` becomes
+  `letter/png/` (rendered pages), `letter/md/` (recognized pages) and
+  `letter/letter.md` (all pages merged). Plain images skip the `png` step.
+  The standalone steps keep writing flat next to their inputs.
+
+### Changed
+
+- `convert` no longer writes a single `combined.md` for the whole folder;
+  each input's merged document is `<name>/<name>.md`.
+
 ## [1.4.0] - 2026-08-23
 
 ### Changed
@@ -105,6 +119,7 @@ Initial release.
 - `combine` — merge OCR'd Markdown questionnaire files into one sorted `combined.md`.
 - Fully on-device processing; nothing leaves the machine.
 
+[1.5.0]: https://github.com/kibotu/swift-ocr/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/kibotu/swift-ocr/compare/1.3.1...1.4.0
 [1.3.1]: https://github.com/kibotu/swift-ocr/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/kibotu/swift-ocr/compare/1.2.0...1.3.0
