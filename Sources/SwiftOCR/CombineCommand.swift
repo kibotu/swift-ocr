@@ -13,11 +13,14 @@ enum QuestionParser {
     static let leastMarker = "Least like you"
 
     /// Extracts the `N / M` heading (named captures keep `match.number` statically
-    /// typed) and the answer lines between the two markers. nil when either is missing.
+    /// typed) and the answer lines between the two markers. nil when either is missing
+    /// or the numbers do not fit an `Int` — OCR text is user-controlled, never trap on it.
     static func parse(_ text: String) -> Question? {
         guard let match = text.firstMatch(of: #/(?<number>\d+)\s*[/]\s*(?<total>\d+)/#),
               let most = text.range(of: mostMarker),
-              let least = text.range(of: leastMarker, range: most.upperBound..<text.endIndex)
+              let least = text.range(of: leastMarker, range: most.upperBound..<text.endIndex),
+              let number = Int(match.number),
+              let total = Int(match.total)
         else { return nil }
 
         let answers = text[most.upperBound..<least.lowerBound]
@@ -25,7 +28,7 @@ enum QuestionParser {
             .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty && $0 != "=" && !($0.allSatisfy(\.isNumber)) }
 
-        return Question(number: Int(match.number)!, total: Int(match.total)!, answers: answers)
+        return Question(number: number, total: total, answers: answers)
     }
 }
 

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-08-23
+
+### Fixed
+
+- `combine` no longer crashes on question numbers too large for an `Int`
+  (e.g. OCR noise with twenty digits); such files are skipped instead.
+- Omitting `--lang` now keeps Vision's own language auto-detection instead of
+  overriding it with the full supported-languages list.
+- README documents the correct searchable-PDF output name (`letter.ocr.pdf`).
+
+### Changed
+
+- The shared recognition loop (progress reporting, skip handling, fallback
+  warning) lives in one place instead of duplicated copies in `convert` and
+  `ocr`.
+
 ## [1.3.0] - 2026-08-23
 
 ### Added
@@ -75,6 +91,7 @@ Initial release.
 - `combine` — merge OCR'd Markdown questionnaire files into one sorted `combined.md`.
 - Fully on-device processing; nothing leaves the machine.
 
+[1.3.1]: https://github.com/kibotu/swift-ocr/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/kibotu/swift-ocr/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/kibotu/swift-ocr/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/kibotu/swift-ocr/compare/1.0.0...1.1.0

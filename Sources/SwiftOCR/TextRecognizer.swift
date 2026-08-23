@@ -45,12 +45,12 @@ enum TextRecognizer {
     }
 
     /// Returns recognized lines with their page positions in document conventions.
-    /// An empty `languages` array lets Vision auto-detect across everything it supports.
+    /// An empty `languages` array keeps Vision's own auto-detection.
     static func recognizeLines(in image: CGImage, languages: [String] = []) throws -> [RecognizedLine] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
-        request.recognitionLanguages = languages.isEmpty ? ((try? request.supportedRecognitionLanguages()) ?? []) : languages
+        if !languages.isEmpty { request.recognitionLanguages = languages }
         try VNImageRequestHandler(cgImage: image).perform([request])
         return (request.results ?? []).compactMap { observation in
             observation.topCandidates(1).first.map { candidate in

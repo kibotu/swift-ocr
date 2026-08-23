@@ -38,6 +38,12 @@ struct QuestionParserTests {
         #expect(QuestionParser.parse("no heading, no markers") == nil)
         #expect(QuestionParser.parse("12 / 24 but no markers") == nil)
     }
+
+    @Test
+    func returnsNilWhenNumbersOverflowInt() {
+        // Digits the regex accepts but Int cannot hold — must skip, never trap.
+        #expect(QuestionParser.parse("99999999999999999999 / 24 Most like you A Least like you") == nil)
+    }
 }
 
 @Suite

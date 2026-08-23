@@ -1,5 +1,4 @@
 import ArgumentParser
-import CoreImage
 import Foundation
 
 /// The do-it-all default: PDFs become PNGs, every image becomes Markdown.
@@ -47,30 +46,8 @@ struct ConvertCommand: ParsableCommand {
         queue.sort { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
         let hint = TextRecognizer.resolveLanguages(lang)
         for code in hint.rejected { note("WARN (unsupported language): \(code) — ignoring") }
-        let ciContext = enhance ? CIContext() : nil
-        var osWarned = false
 
-        var recognized = 0
-        for image in queue {
-            do {
-                let result = try ImageOcr.writeMarkdown(
-                    for: image,
-                    languages: hint.resolved,
-                    enhance: enhance,
-                    using: ciContext,
-                    structured: documents,
-                    frontMatter: meta
-                )
-                if result.fellBack && !osWarned {
-                    note("WARN (--documents): needs macOS 26 — falling back to geometric layout")
-                    osWarned = true
-                }
-                print("\(image.lastPathComponent) -> \(result.output.lastPathComponent) (\(result.characters) chars)")
-                recognized += 1
-            } catch {
-                note("SKIP (ocr failed): \(image.lastPathComponent) — \(error.localizedDescription)")
-            }
-        }
+        let recognized = ImageOcr.recognize(queue, languages: hint.resolved, enhance: enhance, structured: documents, frontMatter: meta)
         print("\(recognized)/\(queue.count) file(s) converted")
         if recognized == 0 { throw ExitCode.failure }
     }

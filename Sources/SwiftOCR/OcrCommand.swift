@@ -29,6 +29,41 @@ enum ImageOcr {
         try content.write(to: output, atomically: true, encoding: .utf8)
         return (output, body.count, result.fellBack)
     }
+    /// Recognizes every image, writing `<stem>.md` beside each, reporting progress on
+    /// stdout and skips on stderr. Returns how many images were recognized.
+    @discardableResult
+    static func recognize(
+        _ images: [URL],
+        languages: [String],
+        enhance: Bool,
+        structured: Bool,
+        frontMatter: Bool
+    ) -> Int {
+        let ciContext = enhance ? CIContext() : nil
+        var osWarned = false
+        var recognized = 0
+        for image in images {
+            do {
+                let result = try writeMarkdown(
+                    for: image,
+                    languages: languages,
+                    enhance: enhance,
+                    using: ciContext,
+                    structured: structured,
+                    frontMatter: frontMatter
+                )
+                if result.fellBack && !osWarned {
+                    note("WARN (--documents): needs macOS 26 — falling back to geometric layout")
+                    osWarned = true
+                }
+                print("\(image.lastPathComponent) -> \(result.output.lastPathComponent) (\(result.characters) chars)")
+                recognized += 1
+            } catch {
+                note("SKIP (ocr failed): \(image.lastPathComponent) — \(error.localizedDescription)")
+            }
+        }
+        return recognized
+    }
 }
 
 struct OcrCommand: ParsableCommand {
@@ -59,30 +94,8 @@ struct OcrCommand: ParsableCommand {
 
         let hint = TextRecognizer.resolveLanguages(lang)
         for code in hint.rejected { note("WARN (unsupported language): \(code) — ignoring") }
-        let ciContext = enhance ? CIContext() : nil
-        var osWarned = false
 
-        var recognized = 0
-        for image in images {
-            do {
-                let result = try ImageOcr.writeMarkdown(
-                    for: image,
-                    languages: hint.resolved,
-                    enhance: enhance,
-                    using: ciContext,
-                    structured: documents,
-                    frontMatter: meta
-                )
-                if result.fellBack && !osWarned {
-                    note("WARN (--documents): needs macOS 26 — falling back to geometric layout")
-                    osWarned = true
-                }
-                print("\(image.lastPathComponent) -> \(result.output.lastPathComponent) (\(result.characters) chars)")
-                recognized += 1
-            } catch {
-                note("SKIP (ocr failed): \(image.lastPathComponent) — \(error.localizedDescription)")
-            }
-        }
+        let recognized = ImageOcr.recognize(images, languages: hint.resolved, enhance: enhance, structured: documents, frontMatter: meta)
         print("\(recognized)/\(images.count) image(s) recognized")
         if recognized == 0 { throw ExitCode.failure }
     }

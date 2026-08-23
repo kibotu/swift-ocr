@@ -68,7 +68,7 @@ swift-ocr pdf2png --scale 3 ~/Documents/scans          # higher resolution for s
 swift-ocr ocr --lang de --lang fr ~/Documents/scans    # explicit recognition languages
 swift-ocr ocr --meta --enhance ~/Documents/scans       # YAML front-matter, faint-scan boost
 swift-ocr ocr --documents ~/Documents/scans            # native headings/lists/tables (macOS 26+)
-swift-ocr pdf2pdf ~/Documents/scans                    # searchable PDFs: letter.pdf → letter_ocr.pdf
+swift-ocr pdf2pdf ~/Documents/scans                    # searchable PDFs: letter.pdf → letter.ocr.pdf
 swift-ocr --help                                       # all options
 ```
 
