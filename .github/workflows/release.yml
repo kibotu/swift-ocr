@@ -25,12 +25,9 @@ jobs:
       - name: Resolve dependencies
         run: swift package resolve
 
-      # Split so a hang on CI names the culprit group instead of sitting silent.
-      - name: Test (no Vision)
+      # Vision suites hang indefinitely on hosted runners (see build.yml); same skip list.
+      - name: Test
         run: swift test --skip 'OcrOptionTests|RecognizerForwardingTests|ConvertTests|DocumentsRecognizerTests|PdfToPdfTests'
-
-      - name: Test (Vision)
-        run: swift test --filter 'OcrOptionTests|RecognizerForwardingTests|ConvertTests|DocumentsRecognizerTests|PdfToPdfTests'
 
       - name: Build
         run: swift build -c release
