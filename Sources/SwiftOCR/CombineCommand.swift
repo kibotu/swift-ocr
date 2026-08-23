@@ -12,8 +12,11 @@ enum QuestionParser {
     static let mostMarker = "Most like you"
     static let leastMarker = "Least like you"
 
-    /// Matches headings like `3 / 24`.
-    private static let heading = try! Regex("(?<number>\\d+)\\s*[/]\\s*(?<total>\\d+)")
+    /// Matches headings like `3 / 24`. The explicit output type makes the named captures
+    /// statically accessible (`match.number`) instead of optional dynamic lookups.
+    private static let heading = try! Regex<(Substring, number: Substring, total: Substring)>(
+        #"(?<number>\d+)\s*[/]\s*(?<total>\d+)"#
+    )
 
     /// Extracts the `N / M` heading and the answer lines between the two markers. nil when either is missing.
     static func parse(_ text: String) -> Question? {
