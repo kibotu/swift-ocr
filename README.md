@@ -77,10 +77,9 @@ Output files appear next to their inputs. A single-page PDF keeps its base name
 `handout_p1.png`, `handout_p1.md`, …). Warnings go to stderr; stdout carries results
 only, so scripts can parse it.
 
-`combine` reads a `N / M` heading and the answer lines between *Most like you* /
-*Least like you* markers, removes noise lines, sorts by question number, and caps four
-answers per question. It exists because I had twenty-four personality-question scans;
-ignore it if your documents are not questionnaires.
+`combine` concatenates every `<name>.md` in a folder into one `combined.md`,
+sorted by name — so `handout_p1.md`, `handout_p2.md`, … become a single
+document, with pages separated by blank lines.
 
 ## Why
 
@@ -111,7 +110,7 @@ scanned documents, this is rarely a problem.
   visible surface stays the scan, while Preview, Spotlight and Acrobat can search it.
 - `ocr` reconstructs paragraphs and headings from line bounding boxes; on macOS 26+
   `--documents` hands the job to Apple's document recognizer instead.
-- `combine` produces byte-identical output to the Python script it replaced.
+- `combine` joins every page's Markdown into one `combined.md`, sorted by name.
 - Notable changes are tracked in [CHANGELOG.md](CHANGELOG.md) (Keep a Changelog).
 
 ## Development

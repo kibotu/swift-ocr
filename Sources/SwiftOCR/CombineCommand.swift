@@ -1,57 +1,11 @@
 import ArgumentParser
 import Foundation
 
-/// One questionnaire question extracted from OCR'd Markdown.
-struct Question: Equatable {
-    let number: Int
-    let total: Int
-    var answers: [String]
-}
-
-enum QuestionParser {
-    static let mostMarker = "Most like you"
-    static let leastMarker = "Least like you"
-
-    /// Extracts the `N / M` heading (named captures keep `match.number` statically
-    /// typed) and the answer lines between the two markers. nil when either is missing
-    /// or the numbers do not fit an `Int` — OCR text is user-controlled, never trap on it.
-    static func parse(_ text: String) -> Question? {
-        guard let match = text.firstMatch(of: #/(?<number>\d+)\s*[/]\s*(?<total>\d+)/#),
-              let most = text.range(of: mostMarker),
-              let least = text.range(of: leastMarker, range: most.upperBound..<text.endIndex),
-              let number = Int(match.number),
-              let total = Int(match.total)
-        else { return nil }
-
-        let answers = text[most.upperBound..<least.lowerBound]
-            .split(whereSeparator: \.isNewline)
-            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty && $0 != "=" && !($0.allSatisfy(\.isNumber)) }
-
-        return Question(number: number, total: total, answers: answers)
-    }
-}
-
-enum CombinedDocument {
-    /// Renders questions sorted by number, at most four answers each — byte-identical to the original combine.py output.
-    static func markdown(for questions: [Question]) -> String {
-        var sections: [String] = []
-        for question in questions.sorted(by: { ($0.number, $0.total) < ($1.number, $1.total) }) {
-            sections.append("## Question \(question.number)/\(question.total)\n")
-            sections.append("\(QuestionParser.mostMarker)\n")
-            sections.append(
-                contentsOf: question.answers.prefix(4).enumerated().map { "\($0.offset + 1). \($0.element)" }
-            )
-            sections.append("\(QuestionParser.leastMarker)\n")
-        }
-        return sections.joined(separator: "\n") + "\n"
-    }
-}
-
+/// Concatenates every OCR'd page's Markdown into one document, in name order.
 struct CombineCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "combine",
-        abstract: "Merge OCR'd Markdown files into one combined.md, sorted by question number."
+        abstract: "Merge all Markdown files into one combined.md, sorted by name."
     )
 
     @Argument(help: "Markdown file or folder containing Markdown. Defaults to the current directory.", completion: .file())
@@ -62,26 +16,22 @@ struct CombineCommand: ParsableCommand {
         let files = (try folderURL.inputs(matching: ["md"])).filter { $0.lastPathComponent != "combined.md" }
         guard !files.isEmpty else { print("No Markdown found in \(folderURL.path)"); return }
 
-        var questions: [Question] = []
+        var sections: [String] = []
         for file in files {
             do {
-                let text = try String(contentsOf: file, encoding: .utf8)
-                if let question = QuestionParser.parse(text) {
-                    questions.append(question)
-                } else {
-                    note("SKIP (no question): \(file.lastPathComponent)")
-                }
+                sections.append(try String(contentsOf: file, encoding: .utf8)
+                    .trimmingCharacters(in: .whitespacesAndNewlines))
             } catch {
                 note("SKIP (unreadable): \(file.lastPathComponent)")
             }
         }
-        guard !questions.isEmpty else {
-            note("No question numbers found in \(folderURL.path)")
+        guard !sections.isEmpty else {
+            note("No readable Markdown in \(folderURL.path)")
             throw ExitCode.failure
         }
 
         let output = folderURL.appending(path: "combined.md")
-        try CombinedDocument.markdown(for: questions).write(to: output, atomically: true, encoding: .utf8)
-        print("Combined \(questions.count) question(s) -> \(output.path)")
+        try sections.joined(separator: "\n\n").appending("\n").write(to: output, atomically: true, encoding: .utf8)
+        print("Combined \(sections.count) file(s) -> \(output.path)")
     }
 }

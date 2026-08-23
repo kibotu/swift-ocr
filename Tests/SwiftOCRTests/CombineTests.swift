@@ -4,66 +4,39 @@ import Testing
 @testable import SwiftOCR
 
 @Suite
-struct QuestionParserTests {
-    @Test
-    func parsesNumberAndFiltersAnswerNoise() {
-        let text = """
-        Some header noise 3 / 24
-        Most like you
-        Energetic
-        =
-        12
-        Organised
+final class CombineTests {
+    private let directory = FileManager.default.temporaryDirectory
+        .appending(path: "swift-ocr-combine-\(UUID().uuidString)")
 
-        Least like you
-        Quiet
-        """
-        #expect(QuestionParser.parse(text) == Question(number: 3, total: 24, answers: ["Energetic", "Organised"]))
+    init() throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    }
+
+    deinit {
+        try? FileManager.default.removeItem(at: directory)
     }
 
     @Test
-    func toleratesSpacingAroundTheSlash() {
-        #expect(QuestionParser.parse("7/24 Most like you A Least like you")?.number == 7)
-        #expect(QuestionParser.parse("7 / 24 Most like you A Least like you")?.number == 7)
+    func mergesAllMarkdownSortedIntoOneFile() throws {
+        try "second page".write(to: directory.appending(path: "b.md"), atomically: true, encoding: .utf8)
+        try "first page".write(to: directory.appending(path: "a.md"), atomically: true, encoding: .utf8)
+
+        var command = try CombineCommand.parse([directory.path])
+        try command.run()
+
+        let combined = try String(contentsOf: directory.appending(path: "combined.md"), encoding: .utf8)
+        #expect(combined == "first page\n\nsecond page\n")
     }
 
     @Test
-    func onlyAcceptsLeastMarkerAfterMost() {
-        let reversed = "Least like you\n7 / 24\nMost like you\nA"
-        #expect(QuestionParser.parse(reversed) == nil)
-    }
+    func excludesItsOwnOutputFromReruns() throws {
+        try "only page".write(to: directory.appending(path: "page.md"), atomically: true, encoding: .utf8)
 
-    @Test
-    func returnsNilWithoutHeadingOrMarkers() {
-        #expect(QuestionParser.parse("no heading, no markers") == nil)
-        #expect(QuestionParser.parse("12 / 24 but no markers") == nil)
-    }
+        var command = try CombineCommand.parse([directory.path])
+        try command.run()
+        try command.run()
 
-    @Test
-    func returnsNilWhenNumbersOverflowInt() {
-        // Digits the regex accepts but Int cannot hold — must skip, never trap.
-        #expect(QuestionParser.parse("99999999999999999999 / 24 Most like you A Least like you") == nil)
-    }
-}
-
-@Suite
-struct CombinedDocumentTests {
-    @Test
-    func matchesLegacyPythonOutputByteForByte() {
-        let markdown = CombinedDocument.markdown(for: [Question(number: 1, total: 24, answers: ["A", "B"])])
-        #expect(markdown == "## Question 1/24\n\nMost like you\n\n1. A\n2. B\nLeast like you\n\n")
-    }
-
-    @Test
-    func sortsByQuestionNumberAndCapsAnswersAtFour() throws {
-        let markdown = CombinedDocument.markdown(for: [
-            Question(number: 12, total: 24, answers: ["A", "B", "C", "D", "E"]),
-            Question(number: 2, total: 30, answers: ["X"]),
-        ])
-        let second = try #require(markdown.range(of: "## Question 2/30")).lowerBound
-        let twelfth = try #require(markdown.range(of: "## Question 12/24")).lowerBound
-        #expect(second < twelfth)
-        #expect(markdown.contains("4. D"))
-        #expect(!markdown.contains("5. E"))
+        let combined = try String(contentsOf: directory.appending(path: "combined.md"), encoding: .utf8)
+        #expect(combined == "only page\n")
     }
 }

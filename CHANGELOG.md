@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-23
+
+### Changed
+
+- `combine` now concatenates every Markdown file into one `combined.md`,
+  sorted by name, instead of extracting personality-questionnaire structure
+  (`N / M` headings with *Most like you* / *Least like you* markers). Pages
+  are separated by blank lines; unreadable files are skipped.
+
+### Removed
+
+- The questionnaire parser behind `combine` — question headings, marker
+  extraction and answer filtering are gone along with their tests.
+
 ## [1.3.1] - 2026-08-23
 
 ### Fixed
@@ -91,6 +105,7 @@ Initial release.
 - `combine` — merge OCR'd Markdown questionnaire files into one sorted `combined.md`.
 - Fully on-device processing; nothing leaves the machine.
 
+[1.4.0]: https://github.com/kibotu/swift-ocr/compare/1.3.1...1.4.0
 [1.3.1]: https://github.com/kibotu/swift-ocr/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/kibotu/swift-ocr/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/kibotu/swift-ocr/compare/1.1.0...1.2.0
