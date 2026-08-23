@@ -63,6 +63,7 @@ enum DocumentRenderer {
         case .list(let items):
             return items.map { "- \($0)" }.joined(separator: "\n")
         case .table(let rows):
+            guard !rows.isEmpty else { return "" }
             let escaped = rows.map { row in
                 "| " + row.map { $0.replacingOccurrences(of: "|", with: "\\|") }.joined(separator: " | ") + " |"
             }

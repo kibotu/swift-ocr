@@ -22,9 +22,14 @@ enum PdfToPdf {
 
         for pageNumber in 1...pageCount {
             guard let page = document.page(at: pageNumber),
-                  let bitmap = PdfToPng.bitmap(for: page, scale: scale) else { continue }
+                  let bitmap = PdfToPng.bitmap(for: page, scale: scale) else {
+                note("SKIP (page \(pageNumber)): \(url.lastPathComponent) — could not be rendered")
+                continue
+            }
             let box = page.getBoxRect(.mediaBox)
-            context.beginPDFPage(nil as CFDictionary?)
+            // Mixed-size documents need per-page boxes; CGPDFContext.h requires
+            // them as CFData wrapping the CGRect by value.
+            context.beginPDFPage([kCGPDFContextMediaBox: withUnsafeBytes(of: box) { Data($0) } as CFData] as CFDictionary)
             context.draw(bitmap, in: box)
 
             context.setTextDrawingMode(.invisible)

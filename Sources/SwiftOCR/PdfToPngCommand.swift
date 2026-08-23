@@ -5,10 +5,10 @@ import Foundation
 struct PdfToPngCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "pdf2png",
-        abstract: "Render every page of each PDF in a folder to a PNG."
+        abstract: "Render a PDF, or every PDF in a folder, to one PNG per page."
     )
 
-    @Argument(help: "Folder containing PDFs. Defaults to the current directory.", completion: .directory)
+    @Argument(help: "PDF file or folder containing PDFs. Defaults to the current directory.", completion: .file())
     var folder = "."
 
     @Option(help: "Rendering scale; 2 ≈ 144 dpi, plenty for OCR.")
@@ -16,7 +16,7 @@ struct PdfToPngCommand: ParsableCommand {
 
     mutating func run() throws {
         let folderURL = URL(fileURLWithPath: folder)
-        let pdfs = try folderURL.contents(matching: ["pdf"])
+        let pdfs = try folderURL.inputs(matching: ["pdf"]).filter { !$0.isOcrOutput }
         guard !pdfs.isEmpty else { print("No PDFs found in \(folderURL.path)"); return }
 
         var rendered = 0

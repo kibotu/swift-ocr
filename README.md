@@ -36,16 +36,24 @@ One dependency besides the system frameworks: [swift-argument-parser](https://gi
 USAGE: swift-ocr <subcommand>
 
 SUBCOMMANDS:
-  pdf2png   Render every page of each PDF in a folder to a PNG
-  ocr       Recognize text in each image of a folder, writing <name>.md
+  convert   Render PDFs to PNGs and recognize text into Markdown (default)
+  pdf2png   Render a PDF, or every PDF in a folder, to one PNG per page
+  ocr       Recognize text in an image or each image of a folder, writing <name>.md
   pdf2pdf   Add an invisible OCR text layer to each PDF, making it searchable
   combine   Merge OCR'd Markdown files into one combined.md
 ```
 
-Each subcommand accepts a folder argument. If you omit the folder, the tool uses the
-current directory.
+Each subcommand accepts a folder or a single file. If you omit it, the tool
+uses the current directory. The default `convert` runs everything: PDFs are
+rendered to PNGs, then every image is recognized into `<name>.md`.
 
-Convert all scans in a folder:
+Convert all scans in a folder — one command:
+
+```bash
+swift-ocr ~/Documents/scans
+```
+
+Or step through the pipeline yourself:
 
 ```bash
 swift-ocr pdf2png ~/Documents/scans

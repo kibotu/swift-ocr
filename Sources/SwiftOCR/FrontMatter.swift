@@ -24,13 +24,21 @@ enum FrontMatter {
 
         var lines: [String] = []
         if let language = NLLanguageRecognizer.dominantLanguage(for: text)?.rawValue {
-            lines.append("language: \"\(language)\"")
+            lines.append("language: \(quoted(language))")
         }
         for (name, values) in [("dates", dates), ("phones", phones), ("links", links), ("addresses", addresses)]
         where !values.isEmpty {
             lines.append("\(name):")
-            for value in values.sorted() { lines.append("  - \"\(value)\"") }
+            for value in values.sorted() { lines.append("  - \(quoted(value))") }
         }
         return "---\n" + lines.joined(separator: "\n") + "\n---\n"
+    }
+
+    /// OCR text can contain quotes; escape them so the YAML stays parseable.
+    private static func quoted(_ value: String) -> String {
+        let escaped = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "\"\(escaped)\""
     }
 }

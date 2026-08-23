@@ -5,8 +5,9 @@ import Foundation
 struct SwiftOCR: ParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "On-device PDF → PNG → Markdown OCR pipeline built on Apple Vision.",
-        version: "1.2.0",
-        subcommands: [PdfToPngCommand.self, OcrCommand.self, PdfToPdfCommand.self, CombineCommand.self]
+        version: "1.3.0",
+        subcommands: [ConvertCommand.self, PdfToPngCommand.self, OcrCommand.self, PdfToPdfCommand.self, CombineCommand.self],
+        defaultSubcommand: ConvertCommand.self
     )
 }
 
@@ -16,14 +17,29 @@ func note(_ message: String) {
 }
 
 extension URL {
-    /// Directory entries with a matching extension, sorted Finder-style (numeric-aware).
-    func contents(matching extensions: Set<String>) throws -> [URL] {
+    /// True for this tool's own searchable-PDF output (`<name>.ocr.pdf`),
+    /// so re-runs skip it instead of nesting another `.ocr` layer.
+    var isOcrOutput: Bool { deletingPathExtension().pathExtension == "ocr" }
+
+    /// Directory entries, or the file itself — filtered by extension and sorted
+    /// Finder-style (numeric-aware). Lets every subcommand take a folder or a single file.
+    func inputs(matching extensions: Set<String>) throws -> [URL] {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+            throw PipelineError.cannotRead(self)
+        }
+        if !isDirectory.boolValue {
+            guard extensions.contains(pathExtension.lowercased()) else {
+                throw PipelineError.unsupportedInput(self)
+            }
+            return [self]
+        }
         do {
             return try FileManager.default.contentsOfDirectory(at: self, includingPropertiesForKeys: nil)
                 .filter { extensions.contains($0.pathExtension.lowercased()) }
                 .sorted(by: { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending })
         } catch {
-            throw PipelineError.cannotReadFolder(self)
+            throw PipelineError.cannotRead(self)
         }
     }
 }

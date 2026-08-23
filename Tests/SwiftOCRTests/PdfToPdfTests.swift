@@ -37,6 +37,20 @@ enum TestImages {
         CTLineDraw(CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: font])), context)
         return try #require(context.makeImage())
     }
+
+    /// Wraps a rasterized-text bitmap in a one-page PDF — the shape of a scanned page.
+    static func rasterizedTextPDF(text: String, in directory: URL) throws -> URL {
+        let image = try rasterizedText(text: text)
+        let url = directory.appending(path: "sample.pdf")
+        var mediaBox = CGRect(origin: .zero, size: CGSize(width: image.width, height: image.height))
+        let consumer = try #require(CGDataConsumer(url: url as CFURL))
+        let pdfContext = try #require(CGContext(consumer: consumer, mediaBox: &mediaBox, nil))
+        pdfContext.beginPDFPage(nil as CFDictionary?)
+        pdfContext.draw(image, in: mediaBox)
+        pdfContext.endPDFPage()
+        pdfContext.closePDF()
+        return url
+    }
 }
 
 @Suite
@@ -64,6 +78,31 @@ final class PdfToPdfTests {
     }
 
     @Test
+    func keepsPerPageSizesForMixedDocuments() throws {
+        // Page 1 portrait, page 2 landscape: the searchable PDF must keep both boxes.
+        let url = directory.appending(path: "mixed.pdf")
+        let consumer = try #require(CGDataConsumer(url: url as CFURL))
+        var firstBox = CGRect(x: 0, y: 0, width: 100, height: 140)
+        let context = try #require(CGContext(consumer: consumer, mediaBox: &firstBox, nil))
+        for box in [firstBox, CGRect(x: 0, y: 0, width: 220, height: 80)] {
+            // Per-page boxes here too — otherwise this source PDF has uniform pages
+            // and the test proves nothing.
+            let info = [kCGPDFContextMediaBox: withUnsafeBytes(of: box) { Data($0) } as CFData] as CFDictionary
+            context.beginPDFPage(info)
+            context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+            context.fill(box)
+            context.endPDFPage()
+        }
+        context.closePDF()
+
+        let output = try PdfToPdf.render(pdfAt: url, scale: 2)
+        let document = try #require(PDFDocument(url: output))
+        #expect(document.pageCount == 2)
+        #expect(document.page(at: 0)!.bounds(for: .mediaBox).size == CGSize(width: 100, height: 140))
+        #expect(document.page(at: 1)!.bounds(for: .mediaBox).size == CGSize(width: 220, height: 80))
+    }
+
+    @Test
     func throwsOnGarbageInput() throws {
         let url = directory.appending(path: "garbage.pdf")
         try Data("not a pdf".utf8).write(to: url)
@@ -75,18 +114,8 @@ final class PdfToPdfTests {
 
     // MARK: - Fixtures
 
-    /// Wraps a rasterized-text bitmap in a one-page PDF — the shape of a scanned page.
     private func rasterizedTextPDF(text: String) throws -> URL {
-        let image = try TestImages.rasterizedText(text: text)
-        let url = directory.appending(path: "sample.pdf")
-        var mediaBox = CGRect(origin: .zero, size: CGSize(width: image.width, height: image.height))
-        let consumer = try #require(CGDataConsumer(url: url as CFURL))
-        let pdfContext = try #require(CGContext(consumer: consumer, mediaBox: &mediaBox, nil))
-        pdfContext.beginPDFPage(nil as CFDictionary?)
-        pdfContext.draw(image, in: mediaBox)
-        pdfContext.endPDFPage()
-        pdfContext.closePDF()
-        return url
+        try TestImages.rasterizedTextPDF(text: text, in: directory)
     }
 }
 

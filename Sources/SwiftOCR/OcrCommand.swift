@@ -1,14 +1,43 @@
 import ArgumentParser
-import CoreImage
 import Foundation
+import CoreImage
+
+/// One image in, `<stem>.md` beside it — the recognition step every OCR-ing command shares.
+enum ImageOcr {
+    /// Loads, optionally enhances, recognizes and writes the Markdown next to the image.
+    static func writeMarkdown(
+        for image: URL,
+        languages: [String],
+        enhance: Bool = false,
+        using ciContext: CIContext? = nil,
+        structured: Bool = false,
+        frontMatter: Bool = false
+    ) throws -> (output: URL, characters: Int, fellBack: Bool) {
+        var cgImage = try TextRecognizer.loadCGImage(at: image)
+        if enhance, let ciContext {
+            if let processed = TextRecognizer.enhanced(cgImage, using: ciContext) {
+                cgImage = processed
+            } else {
+                note("WARN (enhance failed): \(image.lastPathComponent) — continuing unprocessed")
+            }
+        }
+
+        let result = try Recognizer.read(cgImage, languages: languages, structured: structured)
+        let body = DocumentRenderer.markdown(from: result.blocks)
+        let output = image.deletingPathExtension().appendingPathExtension("md")
+        let content = frontMatter ? FrontMatter.markdown(for: body) + body : body
+        try content.write(to: output, atomically: true, encoding: .utf8)
+        return (output, body.count, result.fellBack)
+    }
+}
 
 struct OcrCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "ocr",
-        abstract: "Recognize text in each image of a folder, writing <name>.md next to it."
+        abstract: "Recognize text in an image or each image of a folder, writing <name>.md next to it."
     )
 
-    @Argument(help: "Folder containing images. Defaults to the current directory.", completion: .directory)
+    @Argument(help: "Image or folder containing images. Defaults to the current directory.", completion: .file())
     var folder = "."
 
     @Option(parsing: .singleValue, help: "Recognition language hint, repeatable: --lang de --lang fr. Omit for Vision's auto-detection.")
@@ -25,7 +54,7 @@ struct OcrCommand: ParsableCommand {
 
     mutating func run() throws {
         let folderURL = URL(fileURLWithPath: folder)
-        let images = try folderURL.contents(matching: ["png", "jpg", "jpeg", "tiff"])
+        let images = try folderURL.inputs(matching: ["png", "jpg", "jpeg", "tiff"])
         guard !images.isEmpty else { print("No images found in \(folderURL.path)"); return }
 
         let hint = TextRecognizer.resolveLanguages(lang)
@@ -36,26 +65,19 @@ struct OcrCommand: ParsableCommand {
         var recognized = 0
         for image in images {
             do {
-                var cgImage = try TextRecognizer.loadCGImage(at: image)
-                if let ciContext {
-                    if let processed = TextRecognizer.enhanced(cgImage, using: ciContext) {
-                        cgImage = processed
-                    } else {
-                        note("WARN (enhance failed): \(image.lastPathComponent) — continuing unprocessed")
-                    }
-                }
-
-                let result = try Recognizer.read(cgImage, languages: hint.resolved, structured: documents)
+                let result = try ImageOcr.writeMarkdown(
+                    for: image,
+                    languages: hint.resolved,
+                    enhance: enhance,
+                    using: ciContext,
+                    structured: documents,
+                    frontMatter: meta
+                )
                 if result.fellBack && !osWarned {
                     note("WARN (--documents): needs macOS 26 — falling back to geometric layout")
                     osWarned = true
                 }
-
-                let body = DocumentRenderer.markdown(from: result.blocks)
-                let output = image.deletingPathExtension().appendingPathExtension("md")
-                let content = meta ? FrontMatter.markdown(for: body) + body : body
-                try content.write(to: output, atomically: true, encoding: .utf8)
-                print("\(image.lastPathComponent) -> \(output.lastPathComponent) (\(body.count) chars)")
+                print("\(image.lastPathComponent) -> \(result.output.lastPathComponent) (\(result.characters) chars)")
                 recognized += 1
             } catch {
                 note("SKIP (ocr failed): \(image.lastPathComponent) — \(error.localizedDescription)")

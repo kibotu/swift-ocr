@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-23
+
+### Added
+
+- `convert` — the new default subcommand: renders PDFs to PNGs and recognizes
+  every image into Markdown in one pass (`swift-ocr ~/scans` just works).
+  Forwards `--scale`, `--lang`, `--meta`, `--enhance` and `--documents`.
+- Every subcommand now accepts a single file as well as a folder — e.g.
+  `swift-ocr ocr letter.png` or `swift-ocr pdf2pdf letter.pdf`. A file with
+  an unsupported extension fails with a clear error instead of a silent no-op.
+
+### Fixed
+
+- `pdf2pdf` keeps each page's own media box, so mixed portrait/landscape
+  documents are no longer clipped to the first page's size.
+- Re-running `pdf2pdf`, `pdf2png` or `convert` skips existing
+  `<name>.ocr.pdf` outputs instead of nesting `letter.ocr.ocr.pdf`.
+- `pdf2pdf` warns on stderr when a page cannot be rendered instead of
+  silently dropping it from the searchable output.
+- Front-matter values escape quotes and backslashes so odd OCR text cannot
+  produce invalid YAML.
+
 ## [1.2.0] - 2026-08-23
 
 ### Fixed
@@ -53,6 +75,7 @@ Initial release.
 - `combine` — merge OCR'd Markdown questionnaire files into one sorted `combined.md`.
 - Fully on-device processing; nothing leaves the machine.
 
+[1.3.0]: https://github.com/kibotu/swift-ocr/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/kibotu/swift-ocr/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/kibotu/swift-ocr/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/kibotu/swift-ocr/releases/tag/1.0.0

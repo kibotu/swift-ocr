@@ -1,7 +1,8 @@
 import Foundation
 
 enum PipelineError: LocalizedError {
-    case cannotReadFolder(URL)
+    case cannotRead(URL)
+    case unsupportedInput(URL)
     case unreadablePDF(URL)
     case cannotEncodePNG(URL)
     case cannotEncodePDF(URL)
@@ -9,7 +10,8 @@ enum PipelineError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .cannotReadFolder(let url): "Cannot read folder: \(url.path)"
+        case .cannotRead(let url): "Cannot read: \(url.path)"
+        case .unsupportedInput(let url): "Not a supported input file: \(url.path)"
         case .unreadablePDF(let url): "Cannot read PDF: \(url.path)"
         case .cannotEncodePNG(let url): "Cannot encode PNG: \(url.path)"
         case .cannotEncodePDF(let url): "Cannot encode PDF: \(url.path)"

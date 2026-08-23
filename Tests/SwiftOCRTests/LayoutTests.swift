@@ -76,6 +76,23 @@ struct LayoutTests {
 }
 
 @Suite
+struct DocumentRendererTests {
+    private let block = PositionedBlock(block: .paragraph("x"), region: PageRect(minX: 0, minY: 0, maxX: 1, maxY: 1))
+
+    @Test
+    func rendersTablesWithSeparatorRow() {
+        let table = PositionedBlock(block: .table([["a", "b|c"], ["1", "2"]]), region: block.region)
+        #expect(DocumentRenderer.markdown(from: [table]) == "| a | b\\|c |\n| --- | --- |\n| 1 | 2 |\n")
+    }
+
+    @Test
+    func emptyTableDoesNotCrash() {
+        let table = PositionedBlock(block: .table([]), region: block.region)
+        #expect(!DocumentRenderer.markdown(from: [table]).contains("|"))
+    }
+}
+
+@Suite
 struct PageRectTests {
     /// Floating-point origin flips need a tolerance, not exact equality.
     private func expectClose(_ a: CGFloat, _ b: CGFloat) -> Bool {

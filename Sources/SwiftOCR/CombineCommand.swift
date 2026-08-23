@@ -12,17 +12,10 @@ enum QuestionParser {
     static let mostMarker = "Most like you"
     static let leastMarker = "Least like you"
 
-    /// Matches headings like `3 / 24`. The explicit output type makes the named captures
-    /// statically accessible (`match.number`) instead of optional dynamic lookups.
-    /// A computed property, because `Regex` is not `Sendable` and must not sit in a
-    /// global; recompiling per lookup is negligible next to file I/O.
-    private static var heading: Regex<(Substring, number: Substring, total: Substring)> {
-        try! Regex(#"(?<number>\d+)\s*[/]\s*(?<total>\d+)"#)
-    }
-
-    /// Extracts the `N / M` heading and the answer lines between the two markers. nil when either is missing.
+    /// Extracts the `N / M` heading (named captures keep `match.number` statically
+    /// typed) and the answer lines between the two markers. nil when either is missing.
     static func parse(_ text: String) -> Question? {
-        guard let match = text.firstMatch(of: heading),
+        guard let match = text.firstMatch(of: #/(?<number>\d+)\s*[/]\s*(?<total>\d+)/#),
               let most = text.range(of: mostMarker),
               let least = text.range(of: leastMarker, range: most.upperBound..<text.endIndex)
         else { return nil }
@@ -58,12 +51,12 @@ struct CombineCommand: ParsableCommand {
         abstract: "Merge OCR'd Markdown files into one combined.md, sorted by question number."
     )
 
-    @Argument(help: "Folder containing the OCR'd Markdown files. Defaults to the current directory.", completion: .directory)
+    @Argument(help: "Markdown file or folder containing Markdown. Defaults to the current directory.", completion: .file())
     var folder = "."
 
     mutating func run() throws {
         let folderURL = URL(fileURLWithPath: folder)
-        let files = try folderURL.contents(matching: ["md"]).filter { $0.lastPathComponent != "combined.md" }
+        let files = (try folderURL.inputs(matching: ["md"])).filter { $0.lastPathComponent != "combined.md" }
         guard !files.isEmpty else { print("No Markdown found in \(folderURL.path)"); return }
 
         var questions: [Question] = []

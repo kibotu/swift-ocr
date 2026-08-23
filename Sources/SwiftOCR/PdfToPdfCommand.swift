@@ -4,10 +4,10 @@ import Foundation
 struct PdfToPdfCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "pdf2pdf",
-        abstract: "Make each PDF in a folder searchable by adding an invisible OCR text layer."
+        abstract: "Make a PDF, or each PDF in a folder, searchable by adding an invisible OCR text layer."
     )
 
-    @Argument(help: "Folder containing PDFs. Defaults to the current directory.", completion: .directory)
+    @Argument(help: "PDF file or folder containing PDFs. Defaults to the current directory.", completion: .file())
     var folder = "."
 
     @Option(help: "Rendering scale for recognition; 2 ≈ 144 dpi, plenty.")
@@ -18,7 +18,7 @@ struct PdfToPdfCommand: ParsableCommand {
 
     mutating func run() throws {
         let folderURL = URL(fileURLWithPath: folder)
-        let pdfs = try folderURL.contents(matching: ["pdf"])
+        let pdfs = try folderURL.inputs(matching: ["pdf"]).filter { !$0.isOcrOutput }
         guard !pdfs.isEmpty else { print("No PDFs found in \(folderURL.path)"); return }
 
         let hint = TextRecognizer.resolveLanguages(lang)
