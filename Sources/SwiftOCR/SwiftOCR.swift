@@ -21,7 +21,7 @@ extension URL {
         do {
             return try FileManager.default.contentsOfDirectory(at: self, includingPropertiesForKeys: nil)
                 .filter { extensions.contains($0.pathExtension.lowercased()) }
-                .sorted(by: { $0.lastPathComponent.localizedStandardCompare(.orderedAscending) == .orderedAscending })
+                .sorted(by: { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending })
         } catch {
             throw PipelineError.cannotReadFolder(self)
         }

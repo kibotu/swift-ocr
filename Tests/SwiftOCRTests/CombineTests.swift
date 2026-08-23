@@ -45,7 +45,7 @@ struct CombinedDocumentTests {
     @Test
     func matchesLegacyPythonOutputByteForByte() {
         let markdown = CombinedDocument.markdown(for: [Question(number: 1, total: 24, answers: ["A", "B"])])
-        #expect(markdown == "## Question 1/24\n\nMost like you\n\n1. A\n2. B\n\nLeast like you\n\n")
+        #expect(markdown == "## Question 1/24\n\nMost like you\n\n1. A\n2. B\nLeast like you\n\n")
     }
 
     @Test

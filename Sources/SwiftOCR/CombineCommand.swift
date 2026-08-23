@@ -14,9 +14,11 @@ enum QuestionParser {
 
     /// Matches headings like `3 / 24`. The explicit output type makes the named captures
     /// statically accessible (`match.number`) instead of optional dynamic lookups.
-    private static let heading = try! Regex<(Substring, number: Substring, total: Substring)>(
-        #"(?<number>\d+)\s*[/]\s*(?<total>\d+)"#
-    )
+    /// A computed property, because `Regex` is not `Sendable` and must not sit in a
+    /// global; recompiling per lookup is negligible next to file I/O.
+    private static var heading: Regex<(Substring, number: Substring, total: Substring)> {
+        try! Regex(#"(?<number>\d+)\s*[/]\s*(?<total>\d+)"#)
+    }
 
     /// Extracts the `N / M` heading and the answer lines between the two markers. nil when either is missing.
     static func parse(_ text: String) -> Question? {

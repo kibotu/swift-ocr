@@ -50,14 +50,18 @@ final class PdfToPngTests {
     private func makePDF(pages: Int) throws -> URL {
         let url = directory.appending(path: "sample.pdf")
         let box = CGRect(x: 0, y: 0, width: 100, height: 50)
-        guard let consumer = CGDataConsumer(url: url as CFURL),
-              let context = CGContext(consumer: consumer, mediaBox: box, auxiliaryInfo: nil) else {
+        guard let consumer = CGDataConsumer(url: url as CFURL) else {
             throw PipelineError.unreadablePDF(url)
         }
-        context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+        var mediaBox = box
+        guard let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
+            throw PipelineError.unreadablePDF(url)
+        }
+        let red = CGColor(red: 1, green: 0, blue: 0, alpha: 1)
         for _ in 0..<pages {
-            context.beginPDFPage(nil)
-            context.fill(box, with: .color)
+            context.beginPDFPage(nil as CFDictionary?)
+            context.setFillColor(red)
+            context.fill(box)
             context.endPDFPage()
         }
         context.closePDF()
