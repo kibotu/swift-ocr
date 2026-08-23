@@ -1,6 +1,9 @@
 # swift-ocr
 
-[![Build](https://github.com/kibotu/swift-ocr/actions/workflows/build.yml/badge.svg)](https://github.com/kibotu/swift-ocr/actions/workflows/build.yml)
+[![Build](https://github.com/kibotu/swift-ocr/actions/workflows/build.yml/badge.svg)](https://github.com/kibotu/swift-ocr/actions/workflows/build.yml) [![GitHub Release](https://img.shields.io/github/v/release/kibotu/swift-ocr)](https://github.com/kibotu/swift-ocr/releases)
+
+[![Static Badge](https://img.shields.io/badge/macOS%2013%20-blue)](https://developer.apple.com/documentation/macos-release-notes)
+[![Static Badge](https://img.shields.io/badge/Swift%206.0%20-%20orange)](https://www.swift.org/blog/announcing-swift-6/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Batch-convert PDF scans to Markdown on your Mac. Apple Vision does the recognition,
