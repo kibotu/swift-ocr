@@ -7,14 +7,22 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build Swift sources
+  test:
+    name: Build & Test (macOS)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build pdf2png
-        run: swiftc -O -o pdf2png pdf2png.swift
+      - name: Build
+        run: swift build
 
-      - name: Build ocr
-        run: swiftc -O -o ocr ocr.swift
+      - name: Test
+        run: swift test
+
+      - name: Release build
+        run: swift build -c release
+
+      - name: CLI smoke test
+        run: |
+          .build/release/swift-ocr --help
+          .build/release/swift-ocr --version

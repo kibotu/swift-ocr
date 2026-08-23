@@ -6,7 +6,7 @@ import Testing
 @testable import SwiftOCR
 
 @Suite
-struct PdfToPngTests {
+final class PdfToPngTests {
     private let directory = FileManager.default.temporaryDirectory
         .appending(path: "swift-ocr-tests-\(UUID().uuidString)")
 

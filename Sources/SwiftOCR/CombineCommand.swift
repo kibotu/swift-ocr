@@ -12,9 +12,12 @@ enum QuestionParser {
     static let mostMarker = "Most like you"
     static let leastMarker = "Least like you"
 
+    /// Matches headings like `3 / 24`.
+    private static let heading = try! Regex("(?<number>\\d+)\\s*[/]\\s*(?<total>\\d+)")
+
     /// Extracts the `N / M` heading and the answer lines between the two markers. nil when either is missing.
     static func parse(_ text: String) -> Question? {
-        guard let match = text.firstMatch(of: /(?<number>\d+)\s*\/\s*(?<total>\d+)/),
+        guard let match = text.firstMatch(of: heading),
               let most = text.range(of: mostMarker),
               let least = text.range(of: leastMarker, range: most.upperBound..<text.endIndex)
         else { return nil }
@@ -60,11 +63,15 @@ struct CombineCommand: ParsableCommand {
 
         var questions: [Question] = []
         for file in files {
-            let text = try String(contentsOf: file, encoding: .utf8)
-            if let question = QuestionParser.parse(text) {
-                questions.append(question)
-            } else {
-                note("SKIP (no question): \(file.lastPathComponent)")
+            do {
+                let text = try String(contentsOf: file, encoding: .utf8)
+                if let question = QuestionParser.parse(text) {
+                    questions.append(question)
+                } else {
+                    note("SKIP (no question): \(file.lastPathComponent)")
+                }
+            } catch {
+                note("SKIP (unreadable): \(file.lastPathComponent)")
             }
         }
         guard !questions.isEmpty else {

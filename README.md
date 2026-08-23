@@ -3,81 +3,128 @@
 [![Build](https://github.com/kibotu/swift-ocr/actions/workflows/build.yml/badge.svg)](https://github.com/kibotu/swift-ocr/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Zero-dependency PDF → PNG → Markdown pipeline for macOS. Render every page of every PDF in a folder, run Apple's Vision framework over the images, and collect the results as plain Markdown — no Python OCR stack, no cloud API, no third-party packages.
+PDF → PNG → Markdown, entirely on your Mac. No cloud API, no Python stack, no third-party OCR.
+One binary, three subcommands, zero data leaving the machine.
 
-## Intro
+## Why
 
-This project started as a way to digitize stacks of scanned documents (tax letters, invoices, handouts) with nothing but the tools already on a Mac. Two small Swift scripts do all the work:
+I had stacks of scanned documents — tax letters, invoices, handouts — and every solution
+on offer wanted to upload them somewhere. Your Mac already ships a first-class OCR engine
+([Vision](https://developer.apple.com/documentation/vision)) and a PDF renderer
+([CoreGraphics](https://developer.apple.com/documentation/coregraphics)). This tool just
+wires them together in a batch pipeline and gets out of the way.
 
-1. **`pdf2png.swift`** renders every page of each `.pdf` in a folder to a `.png` at 2× scale (~144 dpi) using CoreGraphics.
-2. **`ocr.swift`** feeds every `.png` through `VNRecognizeTextRequest` (accurate mode) and writes the recognized text next to the image as a `.md` file.
+Compared to the usual suspects:
 
-A tiny helper, **`combine.py`**, can merge multiple OCR'd Markdown files into one document sorted by question number.
+| Alternative | The catch |
+|-------------|-----------|
+| Cloud OCR (Google Vision, AWS Textract, Azure) | Your tax letters and invoices leave your machine. API keys, SDKs, and a bill that scales with every page. |
+| Tesseract / OCRmyPDF | A Homebrew dependency dance with language packs, and noticeably worse accuracy on receipts and low-quality scans out of the box. |
+| Python OCR stacks (pytesseract, EasyOCR) | pip environments plus native dependencies just to run one batch job on your own files. |
+| Apple Vision | Already installed, accurate, free, offline, handles 20+ languages — but it only speaks Swift. |
 
-Everything is a self-contained script — read it in a minute, change it in two.
+swift-ocr is the CLI wrapper Vision was missing: no Homebrew formulas, no models to
+download, no account to create — install it with Mint or a plain `swift build`. The
+honest trade-offs: macOS only (Vision is an Apple framework), and recognition quality
+is whatever Apple shipped — you can't fine-tune it, which for scanned documents is
+rarely a problem.
 
-## Features
+The whole thing fits in your head:
 
-- 📄 **Batch PDF rendering** — every page of every PDF in a folder, single-page PDFs keep their base name, multi-page ones get a `_p<N>` suffix
-- 🔍 **On-device OCR** — Apple Vision framework, `.accurate` recognition level, no data leaves your machine
-- ✍️ **Markdown output** — one `.md` per image, same base name, ready for notes apps and version control
-- 🧩 **Composable** — pass any folder as an argument, or none to use the current directory
-- 📦 **Zero dependencies** — Foundation, CoreGraphics, AppKit, Vision; ships with macOS
-- 🤖 **CI-ready** — GitHub Action builds both Swift sources on a macOS runner
+| Stage | What it does |
+|-------|--------------|
+| `pdf2png` | Renders every page of each PDF to a PNG at 2× scale (~144 dpi) via CoreGraphics |
+| `ocr` | Feeds each image through `VNRecognizeTextRequest` (accurate, language-corrected) and writes `<name>.md` next to it |
+| `combine` | Merges question-style Markdown files into one sorted `combined.md` |
 
-## Requirements
+Single-page PDFs keep their base name (`letter.pdf` → `letter.png`); multi-page ones get
+a page suffix (`handout.pdf` → `handout_p1.png`, `handout_p2.png`, …).
 
-- **macOS** 12+ (Vision text recognition)
-- **Xcode command line tools**: `xcode-select --install` (provides `swiftc`)
-- **Python 3** — only needed for `combine.py`
+## Install
 
-## How to Run
+With [Mint](https://github.com/yonaskolb/Mint):
 
-Clone and go — the scripts are interpreted via their shebang or compiled up front:
+```bash
+mint install kibotu/swift-ocr
+```
+
+From source:
 
 ```bash
 git clone https://github.com/kibotu/swift-ocr.git
 cd swift-ocr
-
-# Run directly (shebang)
-./pdf2png.swift path/to/pdfs
-./ocr.swift path/to/pngs
-
-# Or compile first
-swiftc -O -o pdf2png pdf2png.swift
-swiftc -O -o ocr ocr.swift
-./pdf2png ~/Documents/scans && ./ocr ~/Documents/scans
+swift build -c release
+# binary at .build/release/swift-ocr
 ```
 
-Typical end-to-end conversion of a folder of PDFs:
+## Usage
+
+```text
+USAGE: swift-ocr <subcommand>
+
+SUBCOMMANDS:
+  pdf2png   Render every page of each PDF in a folder to a PNG
+  ocr       Recognize text in each image of a folder, writing <name>.md
+  combine   Merge OCR'd Markdown files into one combined.md
+```
+
+Each subcommand takes a folder argument and defaults to the current directory.
+
+Typical end-to-end run over a folder of scans:
 
 ```bash
-./pdf2png.swift taxes   # renders every page of each PDF to PNG
-./ocr.swift taxes       # writes <name>.md next to each PNG
-python3 combine.py      # optional: merge OCR'd files into combined.md
+swift-ocr pdf2png ~/Documents/scans
+swift-ocr ocr ~/Documents/scans
+swift-ocr combine ~/Documents/scans   # optional, for questionnaire-style documents
 ```
 
-Output lands next to the input images: `letter.pdf` → `letter_p1.png`, `letter_p1.md`, …
-
-### Make it executable once
+Options:
 
 ```bash
-chmod +x pdf2png.swift ocr.swift
+swift-ocr pdf2png --scale 3 ~/Documents/scans   # higher resolution for small print
+swift-ocr --help                                # everything else
 ```
 
-## Project Layout
+Output lands next to the input: `letter.pdf` → `letter_p1.png` → `letter_p1.md`.
+Warnings go to stderr; stdout stays clean for scripting.
 
+## Requirements
+
+- **macOS 13+** — Vision text recognition and Swift Concurrency
+- **Xcode 15+** or matching command line tools — `xcode-select --install`
+
+There are no other dependencies beyond [swift-argument-parser](https://github.com/apple/swift-argument-parser),
+and nothing ever leaves your machine.
+
+## Development
+
+```bash
+swift build       # debug build
+swift test        # unit tests (parser, renderer, output format)
+swift run swift-ocr --help
 ```
-├── pdf2png.swift        # PDF → PNG renderer (CoreGraphics)
-├── ocr.swift            # PNG → Markdown OCR (Apple Vision)
-├── combine.py           # optional: merge OCR'd Markdown files
-└── .github/workflows/
-    └── build.yml        # compiles both Swift sources in CI
-```
+
+CI builds, tests, and smoke-runs the CLI on a macOS runner for every push and PR.
+
+## Design notes
+
+- Rendering goes straight through `CGContext` → `CGImageDestination`. No AppKit image
+  objects, no TIFF round-trip, no deprecated APIs. Pages are composited onto an opaque
+  white backdrop because OCR wants dark-on-light and PDFs may paint nothing at all.
+- Images load through ImageIO (`CGImageSource`) rather than `NSImage` for the same reason.
+- `combine` parses a `N / M` heading plus the answer block between *Most like you* /
+  *Least like you* markers, drops noise lines (blanks, bare digits, `=`), caps four
+  answers per question, and reproduces the original script's output byte-for-byte.
+  It exists because I had twenty-four personality-question scans; delete it if you don't.
 
 ## Contributing
 
-PRs are welcome. Keep scripts dependency-free and self-contained.
+PRs welcome. Keep it small, keep it dependency-free, keep it on-device.
+
+## Support
+
+If swift-ocr saved you a few hours gluing together an OCR stack — or kept your scanned
+documents off someone else's servers — consider [buying me a coffee](https://buymeacoffee.com/kibotu).
 
 ## License
 

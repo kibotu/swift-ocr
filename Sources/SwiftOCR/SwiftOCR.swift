@@ -18,8 +18,12 @@ func note(_ message: String) {
 extension URL {
     /// Directory entries with a matching extension, sorted Finder-style (numeric-aware).
     func contents(matching extensions: Set<String>) throws -> [URL] {
-        try FileManager.default.contentsOfDirectory(at: self, includingPropertiesForKeys: nil)
-            .filter { extensions.contains($0.pathExtension.lowercased()) }
-            .sorted { $0.lastPathComponent.localizedStandardCompare(.orderedAscending) == .orderedAscending }
+        do {
+            return try FileManager.default.contentsOfDirectory(at: self, includingPropertiesForKeys: nil)
+                .filter { extensions.contains($0.pathExtension.lowercased()) }
+                .sorted { $0.lastPathComponent.localizedStandardCompare(.orderedAscending) == .orderedAscending }
+        } catch {
+            throw PipelineError.cannotReadFolder(self)
+        }
     }
 }
