@@ -5,7 +5,7 @@ import Foundation
 struct SwiftOCR: ParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "On-device PDF → PNG → Markdown OCR pipeline built on Apple Vision.",
-        version: "1.5.2",
+        version: "1.5.3",
         subcommands: [ConvertCommand.self, PdfToPngCommand.self, OcrCommand.self, PdfToPdfCommand.self, CombineCommand.self],
         defaultSubcommand: ConvertCommand.self
     )
